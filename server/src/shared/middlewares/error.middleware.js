@@ -1,56 +1,62 @@
 import ApiError from "../../shared/errors/ApiError.js";
 import { env } from "../../configs/index.js";
-import { HTTP_STATUS } from "../constants/httpStatus.constant.js";
+import logger from "../../configs/logger.js";
 
 const errorMiddleware = (err, req, res, next) => {
-    let error = err;
+    let normalizedError = err;
+    if (err.name === "CastError") {
+        normalizedError = ApiError.badRequest("Invalid resource identifier");
+    }
 
-    if (error.name === "CastError") {
-        error = ApiError.badRequest("Invalid resource ID");
-    } else if (error.code === 11000) {
-        const field = Object.keys(error.keyValue || {})[0];
-        error = ApiError.conflict(`Duplicate value for ${field}`, [
-            { field, message: "Already exists" },
+    if (err.code === 11000) {
+        const field = Object.keys(err.keyValue || {})[0];
+        normalizedError = ApiError.conflict("Duplicate field value", [
+            {
+                field,
+                message: "Already exists",
+            },
         ]);
-    } else if (error.name === "ValidationError") {
-        const errors = Object.values(error.errors || {}).map((e) => ({
+    }
+
+    if (err.name === "ValidationError") {
+        const errors = Object.values(err.errors || {}).map((e) => ({
             field: e.path,
             message: e.message,
         }));
-        error = ApiError.badRequest("Validation failed", errors);
-    } else if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
-        error = ApiError.unauthorized("Unauthorized");
+
+        normalizedError = ApiError.badRequest("Validation failed", errors);
     }
 
-    if (!(error instanceof ApiError)) {
-        error = ApiError.internal(error.message || "Internal Server Error");
+    if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
+        normalizedError = ApiError.unauthorized("Unauthorized");
     }
 
-    const logPayload = {
-        message: error.message,
-        statusCode: error.statusCode,
+    if (!(normalizedError instanceof ApiError)) {
+        normalizedError = ApiError.internal(err.message || "Internal Server Error");
+    }
+
+    logger.error(normalizedError.message, {
+        statusCode: normalizedError.statusCode,
         method: req.method,
         path: req.originalUrl,
         requestId: req.requestId,
-    };
-
-    if (error.statusCode >= HTTP_STATUS.INTERNAL_SERVER_ERROR) {
-        console.error({ ...logPayload, stack: error.stack });
-    } else {
-        console.error(logPayload);
-    }
+        stack: normalizedError.stack,
+    });
 
     const response = {
         success: false,
-        message: error.message,
+        message: normalizedError.message,
     };
 
-    if (env.NODE_ENV === "development") {
-        response.errors = error.errors || [];
-        response.stack = error.stack;
+    if (Array.isArray(normalizedError.errors) && normalizedError.errors.length) {
+        response.errors = normalizedError.errors;
     }
 
-    res.status(error.statusCode).json(response);
+    if (env.NODE_ENV === "development") {
+        response.stack = normalizedError.stack;
+    }
+
+    res.status(normalizedError.statusCode).json(response);
 };
 
 export default errorMiddleware;

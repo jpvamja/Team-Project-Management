@@ -20,11 +20,11 @@ const logger = winston.createLogger({
         env.NODE_ENV === "production"
             ? combine(timestamp(), errors({ stack: true }), json())
             : combine(
-                colorize(),
-                timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-                errors({ stack: true }),
-                devFormat
-            ),
+                  colorize(),
+                  timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+                  errors({ stack: true }),
+                  devFormat
+              ),
 
     transports: [
         new winston.transports.Console({
