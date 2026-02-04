@@ -3,7 +3,7 @@ import expressLoader from "./express.loader.js";
 
 const loaders = async (app) => {
     await mongoLoader();
-    await expressLoader(app);
+    expressLoader(app);
 };
 
 export default loaders;

@@ -1,9 +1,7 @@
-import ApiResponse from "../../shared/responses/ApiResponse.js";
-import { HTTP_STATUS } from "../../shared/constants/httpStatus.constant.js";
-
 export const healthCheck = (req, res) => {
-    return ApiResponse.success(res, {
-        status: HTTP_STATUS.OK,
+     res.status(200).json({
+        success: true,
+        status: "ok",
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
     });

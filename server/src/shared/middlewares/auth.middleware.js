@@ -1,6 +1,7 @@
 import ApiError from "../errors/ApiError.js";
 import { verifyAccessToken } from "../utils/jwt.utils.js";
 import { AUTH_CONSTANTS } from "../../modules/auth/auth.constants.js";
+import { ROLE_PERMISSIONS } from "../constants/permissions.constant.js";
 
 const authMiddleware = (req, res, next) => {
     const header = req.headers[AUTH_CONSTANTS.AUTH_HEADER];
@@ -16,6 +17,7 @@ const authMiddleware = (req, res, next) => {
         req.user = {
             id: decoded.userId,
             role: decoded.role,
+            permissions: ROLE_PERMISSIONS[decoded.role] || [],
         };
         next();
     } catch (err) {

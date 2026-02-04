@@ -1,7 +1,7 @@
 {
     "name": "team-project-management",
     "version": "1.0.0",
-    "description": "",
+    "description": "Backend API for team project management system",
     "main": "src/server.js",
     "type": "module",
     "engines": {

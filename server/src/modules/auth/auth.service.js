@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
 import Auth from "./auth.model.js";
 import User from "../user/user.model.js";
 import RefreshToken from "./refreshToken.model.js";
@@ -248,4 +249,79 @@ export const logoutUser = async (incomingRefreshToken) => {
         userId: decoded.userId,
         refreshTokenId: tokenDoc._id.toString(),
     });
+};
+
+export const changeUserPassword = async (userId, payload) => {
+    const { oldPassword, newPassword } = payload;
+    const session = await mongoose.startSession();
+
+    try {
+        session.startTransaction();
+
+        const auth = await Auth.findOne({ userId })
+            .select("+passwordHash")
+            .session(session);
+
+        if (!auth) throw ApiError.notFound("Auth record not found");
+
+        const isMatch = await auth.comparePassword(oldPassword);
+        if (!isMatch) throw ApiError.unauthorized("Current password incorrect");
+
+        auth.passwordHash = newPassword;
+        auth.passwordChangedAt = new Date();
+
+        await auth.save({ session });
+        await RefreshToken.deleteMany({ userId }).session(session);
+
+        await session.commitTransaction();
+        logger.info("Password changed", { userId });
+    } catch (e) {
+        await session.abortTransaction();
+        throw e;
+    } finally {
+        session.endSession();
+    }
+};
+
+export const forgotUserPassword = async (email) => {
+    const user = await User.findOne({ email });
+    if (!user) return null;
+
+    const token = crypto.randomBytes(32).toString("hex");
+
+    user.resetPasswordToken = crypto.createHash("sha256").update(token).digest("hex");
+    user.resetPasswordExpiresAt = Date.now() + 15 * 60 * 1000;
+
+    await user.save({ validateBeforeSave: false });
+
+    logger.info("Password reset token generated", { userId: user._id });
+
+    return token;
+};
+
+export const resetUserPassword = async (token, newPassword) => {
+    const hashed = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await User.findOne({
+        resetPasswordToken: hashed,
+        resetPasswordExpiresAt: { $gt: Date.now() },
+    });
+
+    if (!user) throw ApiError.badRequest("Invalid or expired reset token");
+
+    const auth = await Auth.findOne({ userId: user._id }).select("+passwordHash");
+    if (!auth) throw ApiError.internal("Auth record missing");
+
+    auth.passwordHash = newPassword;
+    auth.passwordChangedAt = new Date();
+
+    await auth.save();
+
+    user.resetPasswordToken = null;
+    user.resetPasswordExpiresAt = null;
+    await user.save({ validateBeforeSave: false });
+
+    await RefreshToken.deleteMany({ userId: user._id });
+
+    logger.info("Password reset successful", { userId: user._id });
 };

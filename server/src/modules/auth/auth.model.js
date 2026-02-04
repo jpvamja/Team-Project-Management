@@ -7,6 +7,7 @@ const authSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,
+            unique: true,
         },
         email: {
             type: String,
@@ -30,6 +31,10 @@ const authSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+        passwordChangedAt:{
+            type: Date,
+            default: null,
+        }
     },
     {
         timestamps: true,
@@ -43,7 +48,7 @@ authSchema.pre("save", async function () {
     this.passwordHash = await hashPassword(this.passwordHash);
 });
 
-authSchema.methods.comparePassword = async function (plainPassword) {
+authSchema.methods.comparePassword = function (plainPassword) {
     return comparePassword(plainPassword, this.passwordHash);
 };
 

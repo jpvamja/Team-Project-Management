@@ -2,9 +2,17 @@ import ApiResponse from "../../shared/responses/ApiResponse.js";
 import ApiError from "../../shared/errors/ApiError.js";
 import asyncHandler from "../../shared/utils/asyncHandler.utils.js";
 import pick from "../../shared/utils/pick.utils.js";
-import { env,refreshTokenCookieOptions } from "../../configs/index.js";
+import { env, refreshTokenCookieOptions } from "../../configs/index.js";
 import { logger } from "../../configs/index.js";
-import { registerUser, loginUser, refreshAccessToken, logoutUser } from "./auth.service.js";
+import { 
+    registerUser, 
+    loginUser, 
+    refreshAccessToken, 
+    logoutUser, 
+    changeUserPassword,
+    forgotUserPassword ,
+    resetUserPassword
+} from "./auth.service.js";
 
 export const register = asyncHandler(async (req, res) => {
     const payload = pick(req.body, ["name", "email", "password"]);
@@ -99,3 +107,30 @@ export const logout = asyncHandler(async (req, res) => {
 
     return ApiResponse.success(res, null, "Logged out successfully");
 });
+
+export const changePassword = asyncHandler(async (req, res) => {
+  const userId = req.user.id;
+  const payload = pick(req.body, ["oldPassword", "newPassword"]);
+
+  await changeUserPassword(userId, payload);
+
+  return ApiResponse.success(res, null, "Password changed successfully. Please login again.");
+});
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  const token = await forgotUserPassword(email);
+
+  return ApiResponse.success(res, { resetToken: token }, "Password reset token generated");
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  await resetUserPassword(token, newPassword);
+
+  return ApiResponse.success(res, null, "Password reset successful. Please login.");
+});
+
+

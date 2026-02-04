@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import { env } from "../../configs/index.js";
 import ApiError from "../errors/ApiError.js";
 
-const SALT_ROUNDS = Number(env.SALT_ROUNDS) || 10;
+const SALT_ROUNDS = Number(env.BCRYPT_SALT_ROUNDS) || 10;
 
 export const hashPassword = async (password) => {
     if (!password) {

@@ -22,8 +22,8 @@ const expressLoader = (app) => {
 
     app.use(
         cors({
-            origin: env.NODE_ENV === "production" ? ["https://frontend.com"] : "*",
-            credentials: env.NODE_ENV === "production",
+            origin: env.NODE_ENV === "production" ? ["https://frontend.com"] : true,
+            credentials: true,
         })
     );
 

@@ -22,17 +22,24 @@ const userSchema = new mongoose.Schema(
         },
         role: {
             type: String,
-            enum: ["ADMIN", "TEAMLEAD", "MEMBER"],
-            default: "MEMBER",
+            enum: ["admin", "owner", "member"],
+            default: "member",
         },
         isActive: {
             type: Boolean,
             default: true,
         },
+
+        resetPasswordToken: {
+            type: String,
+            select: false,
+        },
+        resetPasswordExpiresAt: {
+            type: Date,
+            select: false,
+        },
     },
-    {
-        timestamps: true,
-    }
+    { timestamps: true }
 );
 
 const User = mongoose.model("User", userSchema);
